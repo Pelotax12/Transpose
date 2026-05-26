@@ -1,5 +1,5 @@
 import streamlit as st
-from music21 import note, stream, converter
+from music21 import note
 import re
 
 # Configurar página
@@ -18,24 +18,28 @@ NOTAS_PT = ['Dó', 'Dó#', 'Ré', 'Ré#', 'Mi', 'Fá', 'Fá#', 'Sol', 'Sol#', 'L
 SEMITONS_TRANSPOSICAO = 9  # Uma sexta maior = 9 semitons para cima
 
 # Intervalos para escalas (em semitons a partir da tônica)
-ESCALA_MAIOR = [0, 2, 4, 5, 7, 9, 11, 12]  # 8 notas
-ESCALA_PENTATONICA_MENOR = [0, 3, 5, 7, 10, 12]  # 6 notas (incluindo oitava)
+ESCALA_MAIOR = [0, 2, 4, 5, 7, 9, 11]  # 7 notas (sem repetir oitava)
+ESCALA_PENTATONICA_MENOR = [0, 3, 5, 7, 10]  # 5 notas
 
-def transpor_nota(nome_nota, semitons):
+def transpor_nota(nome_nota_ingles, semitons):
     """
     Transpõe uma nota individual por um número de semitons.
+    Retorna apenas o nome da nota sem oitava.
     
     Args:
-        nome_nota (str): Nome da nota (ex: 'C4', 'D#5')
+        nome_nota_ingles (str): Nome da nota (ex: 'C', 'D#')
         semitons (int): Número de semitons para transpor
     
     Returns:
-        str: Nota transposta
+        str: Nota transposta (sem oitava)
     """
     try:
-        n = note.Note(nome_nota)
+        # Usar oitava 4 como referência
+        n = note.Note(f"{nome_nota_ingles}4")
         transposta = n.transpose(semitons)
-        return str(transposta.pitch)
+        pitch = str(transposta.pitch)
+        # Remover o número da oitava, mantendo apenas a nota
+        return pitch.rstrip('0123456789')
     except:
         return None
 
@@ -59,44 +63,48 @@ def converter_nota_portuguesa(nome_nota_ingles):
     
     return resultado
 
-def gerar_escala_maior(nota_tonica, oitava_inicial=4):
+def gerar_escala_maior(nota_tonica):
     """
     Gera uma escala maior a partir de uma tônica.
     
     Args:
-        nota_tonica (str): Nota em inglês (ex: 'C')
-        oitava_inicial (int): Oitava inicial
+        nota_tonica (str): Nota em inglês (ex: 'C', 'G', 'A')
     
     Returns:
-        list: Lista de notas da escala
+        list: Lista de notas da escala (sem oitava)
     """
     try:
-        nota_base = note.Note(f"{nota_tonica}{oitava_inicial}")
+        nota_base = note.Note(f"{nota_tonica}4")
         escala = []
         for intervalo in ESCALA_MAIOR:
             nota_escala = nota_base.transpose(intervalo)
-            escala.append(str(nota_escala.pitch))
+            pitch = str(nota_escala.pitch)
+            # Remover o número da oitava
+            nota_sem_oitava = pitch.rstrip('0123456789')
+            escala.append(nota_sem_oitava)
         return escala
     except:
         return []
 
-def gerar_escala_pentatonica(nota_tonica, oitava_inicial=4):
+def gerar_escala_pentatonica(nota_tonica):
     """
     Gera uma escala pentatônica menor a partir de uma tônica.
     
     Args:
-        nota_tonica (str): Nota em inglês (ex: 'C')
-        oitava_inicial (int): Oitava inicial
+        nota_tonica (str): Nota em inglês (ex: 'C', 'G', 'A')
     
     Returns:
-        list: Lista de notas da escala pentatônica
+        list: Lista de notas da escala (sem oitava)
     """
     try:
-        nota_base = note.Note(f"{nota_tonica}{oitava_inicial}")
+        nota_base = note.Note(f"{nota_tonica}4")
         escala = []
         for intervalo in ESCALA_PENTATONICA_MENOR:
             nota_escala = nota_base.transpose(intervalo)
-            escala.append(str(nota_escala.pitch))
+            pitch = str(nota_escala.pitch)
+            # Remover o número da oitava
+            nota_sem_oitava = pitch.rstrip('0123456789')
+            escala.append(nota_sem_oitava)
         return escala
     except:
         return []
@@ -112,14 +120,15 @@ def analisar_notacao_violao(texto_entrada):
 
 def validar_notas(lista_notas):
     """
-    Valida se as notas são válidas.
+    Valida se as notas são válidas (apenas nota, sem oitava).
     """
     notas_validas = []
     notas_invalidas = []
     
     for n in lista_notas:
         try:
-            note.Note(n)
+            # Adicionar oitava para validação
+            note.Note(f"{n}4")
             notas_validas.append(n)
         except:
             notas_invalidas.append(n)
@@ -151,7 +160,7 @@ with aba1:
     if metodo_entrada == "Múltiplas Notas":
         entrada_violao = st.text_area(
             "Digite as notas do violão (separadas por espaços ou vírgulas):",
-            placeholder="Exemplo: C4 D4 E4 F#4 G4",
+            placeholder="Exemplo: C D E F# G A B",
             height=100
         )
         
@@ -166,24 +175,17 @@ with aba1:
                 st.success(f"✅ {len(notas_validas)} nota(s) válida(s) encontrada(s)")
             
     else:  # Uma Nota
-        col_nota, col_oitava = st.columns(2)
+        col_nota, col_placeholder = st.columns([1, 1])
         
         with col_nota:
             nome_nota_violao = st.selectbox(
-                "Nota:",
+                "Escolha a nota:",
                 NOTAS_INGLES,
+                format_func=lambda x: NOTAS_INGLES[NOTAS_INGLES.index(x)] + " (" + NOTAS_PT[NOTAS_INGLES.index(x)] + ")",
                 index=0
             )
         
-        with col_oitava:
-            oitava_violao = st.number_input(
-                "Oitava:",
-                min_value=0,
-                max_value=8,
-                value=4
-            )
-        
-        entrada_violao = f"{nome_nota_violao}{oitava_violao}"
+        entrada_violao = nome_nota_violao
         lista_notas = [entrada_violao]
         notas_validas = lista_notas
     
@@ -203,12 +205,14 @@ with aba1:
             col1, col2 = st.columns(2)
             
             with col1:
-                st.subheader("🎸 Notas do Violão (Altura de Concerto)")
-                st.write(", ".join(notas_validas))
+                st.subheader("🎸 Notas do Violão")
+                violao_pt = [converter_nota_portuguesa(n) for n in notas_validas]
+                st.write(" → ".join(violao_pt))
             
             with col2:
                 st.subheader("🎷 Notas do Sax Alto")
-                st.write(", ".join(notas_transpostas))
+                sax_pt = [converter_nota_portuguesa(n) for n in notas_transpostas]
+                st.write(" → ".join(sax_pt))
             
             # Tabela detalhada
             st.subheader("📋 Transposição Detalhada")
@@ -241,10 +245,10 @@ with aba1:
             with col2:
                 saida_texto = "TRANSPOSIÇÃO DE VIOLÃO PARA SAX ALTO\n"
                 saida_texto += "="*50 + "\n\n"
-                saida_texto += "Notas do Violão (Altura de Concerto):\n"
-                saida_texto += ", ".join(notas_validas) + "\n\n"
+                saida_texto += "Notas do Violão:\n"
+                saida_texto += ", ".join([converter_nota_portuguesa(n) for n in notas_validas]) + "\n\n"
                 saida_texto += "Notas do Sax Alto:\n"
-                saida_texto += ", ".join(notas_transpostas) + "\n"
+                saida_texto += ", ".join([converter_nota_portuguesa(n) for n in notas_transpostas]) + "\n"
                 
                 st.download_button(
                     label="Baixar em TXT",
@@ -272,31 +276,19 @@ with aba2:
     # Seleção do tom
     st.markdown("### 🎵 Selecione o Tom da Música")
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        tom_indice = st.selectbox(
-            "Escolha a nota tônica:",
-            range(len(NOTAS_INGLES)),
-            format_func=lambda x: NOTAS_INGLES[x],
-            key="tom_nota"
-        )
-        tom_nota_ingles = NOTAS_INGLES[tom_indice]
-        tom_nota_pt = NOTAS_PT[tom_indice]
-    
-    with col2:
-        tom_oitava = st.number_input(
-            "Oitava da tônica:",
-            min_value=2,
-            max_value=6,
-            value=4,
-            key="tom_oitava"
-        )
+    tom_indice = st.selectbox(
+        "Escolha a nota tônica:",
+        range(len(NOTAS_INGLES)),
+        format_func=lambda x: NOTAS_INGLES[x] + " (" + NOTAS_PT[x] + ")",
+        key="tom_nota"
+    )
+    tom_nota_ingles = NOTAS_INGLES[tom_indice]
+    tom_nota_pt = NOTAS_PT[tom_indice]
     
     if tom_nota_ingles:
         # Gerar escalas
-        escala_maior = gerar_escala_maior(tom_nota_ingles, tom_oitava)
-        escala_pentatonica = gerar_escala_pentatonica(tom_nota_ingles, tom_oitava)
+        escala_maior = gerar_escala_maior(tom_nota_ingles)
+        escala_pentatonica = gerar_escala_pentatonica(tom_nota_ingles)
         
         # Transpor escalas para sax alto
         escala_maior_sax = [transpor_nota(n, SEMITONS_TRANSPOSICAO) for n in escala_maior]
@@ -323,10 +315,9 @@ with aba2:
                 for i, (nota, nota_pt) in enumerate(zip(escala_maior, escala_maior_pt)):
                     df_escala.append({
                         "Posição": i + 1,
-                        "Nota (Inglês)": nota,
-                        "Nota (Português)": nota_pt
+                        "Nota": nota_pt,
                     })
-                st.dataframe(df_escala, use_container_width=True)
+                st.dataframe(df_escala, use_container_width=True, hide_index=True)
         
         with col2:
             st.markdown("#### 🎷 Sax Alto (Transposição)")
@@ -338,10 +329,9 @@ with aba2:
                 for i, (nota, nota_pt) in enumerate(zip(escala_maior_sax, escala_maior_sax_pt)):
                     df_escala_sax.append({
                         "Posição": i + 1,
-                        "Nota (Inglês)": nota,
-                        "Nota (Português)": nota_pt
+                        "Nota": nota_pt,
                     })
-                st.dataframe(df_escala_sax, use_container_width=True)
+                st.dataframe(df_escala_sax, use_container_width=True, hide_index=True)
         
         # ====================================================================
         # SEÇÃO 2: ESCALA PENTATÔNICA
@@ -356,8 +346,7 @@ with aba2:
         
         with col1:
             st.markdown("#### 🎸 Violão (Tom Original)")
-            # Remove a última nota (oitava) para mostrar apenas 5 notas principais
-            escala_penta_pt = [converter_nota_portuguesa(n) for n in escala_pentatonica[:-1]]
+            escala_penta_pt = [converter_nota_portuguesa(n) for n in escala_pentatonica]
             escala_penta_display = " → ".join(escala_penta_pt)
             st.info(f"**{tom_nota_pt}** → {escala_penta_display}")
             
@@ -371,7 +360,7 @@ with aba2:
         
         with col2:
             st.markdown("#### 🎷 Sax Alto (Transposição)")
-            escala_penta_sax_pt = [converter_nota_portuguesa(n) for n in escala_pentatonica_sax[:-1]]
+            escala_penta_sax_pt = [converter_nota_portuguesa(n) for n in escala_pentatonica_sax]
             escala_penta_sax_display = " → ".join(escala_penta_sax_pt)
             st.success(f"**{converter_nota_portuguesa(escala_pentatonica_sax[0])}** → {escala_penta_sax_display}")
             
@@ -390,8 +379,8 @@ with aba2:
         
         resumo_data = {
             "Tom": [tom_nota_pt.upper()],
-            "Escala Maior (Sax)": [" - ".join(escala_maior_sax_pt)],
-            "Pentatônica (Sax)": [" - ".join(escala_penta_sax_pt)],
+            "Escala Maior (Sax)": [" → ".join(escala_maior_sax_pt)],
+            "Pentatônica (Sax)": [" → ".join(escala_penta_sax_pt)],
         }
         
         st.dataframe(resumo_data, use_container_width=True)
@@ -411,10 +400,7 @@ with aba2:
             saida_txt += "ESCALA MAIOR (Sax Alto):\n"
             saida_txt += " → ".join(escala_maior_sax_pt) + "\n\n"
             saida_txt += "ESCALA PENTATÔNICA MENOR (Sax Alto):\n"
-            saida_txt += " → ".join(escala_penta_sax_pt) + "\n\n"
-            saida_txt += "NOTAS (Notação Inglesa)\n"
-            saida_txt += "Escala Maior: " + " → ".join(escala_maior_sax) + "\n"
-            saida_txt += "Pentatônica: " + " → ".join(escala_pentatonica_sax[:-1]) + "\n"
+            saida_txt += " → ".join(escala_penta_sax_pt) + "\n"
             
             st.download_button(
                 label="📄 Baixar Resumo (TXT)",
@@ -450,41 +436,45 @@ with st.expander("Como funciona a transposição?"):
     - Isso significa: para transpor notas de violão para sax alto, adicionamos 9 semitons
     
     **Exemplos:**
-    - Violão Dó4 → Sax Alto Lá4 (soa como Dó4)
-    - Violão Ré4 → Sax Alto Si4 (soa como Ré4)
-    - Violão Mi4 → Sax Alto Dó#5 (soa como Mi4)
+    - Violão Dó → Sax Alto Lá (soa como Dó)
+    - Violão Ré → Sax Alto Si (soa como Ré)
+    - Violão Mi → Sax Alto Dó# (soa como Mi)
     """)
 
 with st.expander("Diferença entre Escala Maior e Pentatônica"):
     st.markdown("""
-    **Escala Maior (8 notas):**
+    **Escala Maior (7 notas):**
     - Completa e estruturada
     - Toca bem em qualquer ordem
     - Ideal para melodias precisas
-    - Exemplo em Dó: Dó, Ré, Mi, Fá, Sol, Lá, Si, Dó
+    - Exemplo em Sol: Sol, Lá, Si, Dó, Ré, Mi, Fá#
     
     **Escala Pentatônica Menor (5 notas):**
     - Simplificada (poucas notas)
     - Fácil de memorizar
     - Ótima para improviso rápido
     - Soa bem em qualquer ordem
-    - Exemplo em Dó: Dó, Mib, Fá, Sol, Sib
+    - Exemplo em Sol: Sol, Si♭, Dó, Ré, Mi♭
     """)
 
 with st.expander("Convenção de Nomeação de Notas"):
     st.markdown("""
-    **Formato: Nome da Nota + Oitava**
-    - Nomes das notas: Dó, Dó#, Ré, Ré#, Mi, Fá, Fá#, Sol, Sol#, Lá, Lá#, Si
-    - Oitavas: 0-8 (intervalo comum para violão: 2-6)
-    - Exemplos: Dó4, Ré#5, Fá#3, Sol2
+    **Notas Disponíveis:**
+    - Notas Naturais: Dó, Ré, Mi, Fá, Sol, Lá, Si
+    - Com Acidente:
+      - `#` (sustenido) = nota elevada em meio tom
+      - `♭` (bemol) = nota abaixada em meio tom
+    
+    **Exemplos:**
+    - Dó, Dó#, Ré, Ré#, Mi, Fá, Fá#, Sol, Sol#, Lá, Lá#, Si
     
     **Afinação Padrão do Violão:**
-    - Corda Mi baixo: Mi2
-    - Corda Lá: Lá2
-    - Corda Ré: Ré3
-    - Corda Sol: Sol3
-    - Corda Si: Si3
-    - Corda Mi agudo: Mi4
+    - Corda Mi baixo: Mi
+    - Corda Lá: Lá
+    - Corda Ré: Ré
+    - Corda Sol: Sol
+    - Corda Si: Si
+    - Corda Mi agudo: Mi
     """)
 
 st.markdown("---")
