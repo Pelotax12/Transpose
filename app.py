@@ -3,215 +3,238 @@ from music21 import note, stream, converter
 import re
 
 # Configurar página
-st.set_page_config(page_title="Guitar to Alto Sax Transposer", layout="wide")
-st.title("🎸 Guitar to 🎷 Alto Saxophone Transposer")
+st.set_page_config(page_title="Transpositor de Guitarra para Sax Alto", layout="wide")
+st.title("🎸 Transpositor de Guitarra para 🎷 Sax Alto")
 
 st.markdown("""
-This app transposes guitar notes to alto saxophone notation.
-- **Guitar**: Concert pitch instrument
-- **Alto Saxophone**: Eb instrument (sounds a major 6th lower)
+Este aplicativo transpõe notas de guitarra para notação de sax alto.
+- **Guitarra**: Instrumento em altura de concerto
+- **Sax Alto**: Instrumento em Mib (soa uma sexta maior mais baixo)
 """)
 
 # Notas musicais
-NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-TRANSPOSITION_SEMITONES = 9  # Uma 6ª maior = 9 semitons para cima
+NOTAS = ['Dó', 'Dó#', 'Ré', 'Ré#', 'Mi', 'Fá', 'Fá#', 'Sol', 'Sol#', 'Lá', 'Lá#', 'Si']
+NOTAS_INGLES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+SEMITONS_TRANSPOSICAO = 9  # Uma sexta maior = 9 semitons para cima
 
-def transpose_note(note_name, semitones):
+def transpor_nota(nome_nota, semitons):
     """
     Transpõe uma nota individual por um número de semitons.
     
     Args:
-        note_name (str): Nome da nota (ex: 'C4', 'D#5')
-        semitones (int): Número de semitons para transpor
+        nome_nota (str): Nome da nota (ex: 'C4', 'D#5')
+        semitons (int): Número de semitons para transpor
     
     Returns:
         str: Nota transposta
     """
     try:
         # Usar music21 para transposição
-        n = note.Note(note_name)
-        transposed = n.transpose(semitones)
-        return str(transposed.pitch)
+        n = note.Note(nome_nota)
+        transposta = n.transpose(semitons)
+        return str(transposta.pitch)
     except:
         return None
 
-def parse_guitar_notation(input_text):
+def converter_nota_portuguesa(nome_nota_ingles):
+    """
+    Converte notação inglesa (C, D, E...) para portuguesa (Dó, Ré, Mi...)
+    """
+    mapa = {
+        'C': 'Dó', 'D': 'Ré', 'E': 'Mi', 'F': 'Fá',
+        'G': 'Sol', 'A': 'Lá', 'B': 'Si'
+    }
+    
+    resultado = ""
+    i = 0
+    while i < len(nome_nota_ingles):
+        if nome_nota_ingles[i] in mapa:
+            resultado += mapa[nome_nota_ingles[i]]
+        else:
+            resultado += nome_nota_ingles[i]
+        i += 1
+    
+    return resultado
+
+def analisar_notacao_guitarra(texto_entrada):
     """
     Analisa notação de guitarra e retorna lista de notas.
     Aceita formatos como: C4 D4 E4 ou C4, D4, E4
     """
     # Remover espaços extras e dividir
-    input_text = input_text.strip()
+    texto_entrada = texto_entrada.strip()
     
     # Dividir por espaço ou vírgula
-    notes_list = re.split(r'[,\s]+', input_text)
-    notes_list = [n.strip() for n in notes_list if n.strip()]
+    lista_notas = re.split(r'[,\s]+', texto_entrada)
+    lista_notas = [n.strip() for n in lista_notas if n.strip()]
     
-    return notes_list
+    return lista_notas
 
-def validate_notes(notes_list):
+def validar_notas(lista_notas):
     """
     Valida se as notas são válidas.
     """
-    valid_notes = []
-    invalid_notes = []
+    notas_validas = []
+    notas_invalidas = []
     
-    for n in notes_list:
+    for n in lista_notas:
         try:
             note.Note(n)
-            valid_notes.append(n)
+            notas_validas.append(n)
         except:
-            invalid_notes.append(n)
+            notas_invalidas.append(n)
     
-    return valid_notes, invalid_notes
+    return notas_validas, notas_invalidas
 
 # Interface do Streamlit
-st.header("Input Options")
+st.header("📝 Opções de Entrada")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    input_method = st.radio(
-        "Choose input method:",
-        ["Text Input", "Single Note"],
+    metodo_entrada = st.radio(
+        "Escolha o método de entrada:",
+        ["Múltiplas Notas", "Uma Nota"],
         horizontal=True
     )
 
-if input_method == "Text Input":
-    guitar_input = st.text_area(
-        "Enter guitar notes (separated by spaces or commas):",
-        placeholder="Example: C4 D4 E4 F#4 G4",
+if metodo_entrada == "Múltiplas Notas":
+    entrada_guitarra = st.text_area(
+        "Digite as notas da guitarra (separadas por espaços ou vírgulas):",
+        placeholder="Exemplo: C4 D4 E4 F#4 G4",
         height=100
     )
     
-    if guitar_input:
-        notes_list = parse_guitar_notation(guitar_input)
-        valid_notes, invalid_notes = validate_notes(notes_list)
+    if entrada_guitarra:
+        lista_notas = analisar_notacao_guitarra(entrada_guitarra)
+        notas_validas, notas_invalidas = validar_notas(lista_notas)
         
-        if invalid_notes:
-            st.warning(f"⚠️ Invalid notes detected: {', '.join(invalid_notes)}")
+        if notas_invalidas:
+            st.warning(f"⚠️ Notas inválidas detectadas: {', '.join(notas_invalidas)}")
         
-        if valid_notes:
-            st.success(f"✅ Found {len(valid_notes)} valid notes")
+        if notas_validas:
+            st.success(f"✅ {len(notas_validas)} nota(s) válida(s) encontrada(s)")
         
-else:  # Single Note
-    col_note, col_octave = st.columns(2)
+else:  # Uma Nota
+    col_nota, col_oitava = st.columns(2)
     
-    with col_note:
-        guitar_note_name = st.selectbox(
-            "Note:",
-            NOTES,
+    with col_nota:
+        nome_nota_guitarra = st.selectbox(
+            "Nota:",
+            NOTAS_INGLES,
             index=0
         )
     
-    with col_octave:
-        guitar_octave = st.number_input(
-            "Octave:",
+    with col_oitava:
+        oitava_guitarra = st.number_input(
+            "Oitava:",
             min_value=0,
             max_value=8,
             value=4
         )
     
-    guitar_input = f"{guitar_note_name}{guitar_octave}"
-    notes_list = [guitar_input]
-    valid_notes = notes_list
+    entrada_guitarra = f"{nome_nota_guitarra}{oitava_guitarra}"
+    lista_notas = [entrada_guitarra]
+    notas_validas = lista_notas
 
 # Transposição
-if valid_notes:
-    st.header("Transposition Results")
+if notas_validas:
+    st.header("📊 Resultados da Transposição")
     
-    transposed_notes = []
+    notas_transpostas = []
     
-    for guitar_note in valid_notes:
-        transposed = transpose_note(guitar_note, TRANSPOSITION_SEMITONES)
-        if transposed:
-            transposed_notes.append(transposed)
+    for nota_guitarra in notas_validas:
+        transposta = transpor_nota(nota_guitarra, SEMITONS_TRANSPOSICAO)
+        if transposta:
+            notas_transpostas.append(transposta)
     
     # Exibir resultados em tabela
-    if transposed_notes:
+    if notas_transpostas:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("🎸 Guitar Notes (Concert Pitch)")
-            st.write(", ".join(valid_notes))
+            st.subheader("🎸 Notas da Guitarra (Altura de Concerto)")
+            st.write(", ".join(notas_validas))
         
         with col2:
-            st.subheader("🎷 Alto Saxophone Notes")
-            st.write(", ".join(transposed_notes))
+            st.subheader("🎷 Notas do Sax Alto")
+            st.write(", ".join(notas_transpostas))
         
         # Tabela detalhada
-        st.subheader("Detailed Transposition")
+        st.subheader("📋 Transposição Detalhada")
         
-        table_data = []
-        for guitar, sax in zip(valid_notes, transposed_notes):
-            table_data.append({
-                "Guitar Note": guitar,
-                "Alto Sax Note": sax,
+        dados_tabela = []
+        for guitarra, sax in zip(notas_validas, notas_transpostas):
+            guitarra_pt = converter_nota_portuguesa(guitarra)
+            sax_pt = converter_nota_portuguesa(sax)
+            dados_tabela.append({
+                "Nota Guitarra": guitarra_pt,
+                "Nota Sax Alto": sax_pt,
             })
         
-        st.table(table_data)
+        st.table(dados_tabela)
         
         # Exportar resultados
-        st.subheader("Export")
+        st.subheader("📥 Exportar Resultados")
         col1, col2 = st.columns(2)
         
         with col1:
-            csv_output = "Guitar Note,Alto Sax Note\n"
-            csv_output += "\n".join([f"{g},{s}" for g, s in zip(valid_notes, transposed_notes)])
+            saida_csv = "Nota Guitarra,Nota Sax Alto\n"
+            saida_csv += "\n".join([f"{g},{s}" for g, s in zip(notas_validas, notas_transpostas)])
             st.download_button(
-                label="Download as CSV",
-                data=csv_output,
-                file_name="transposition.csv",
+                label="Baixar em CSV",
+                data=saida_csv,
+                file_name="transposicao.csv",
                 mime="text/csv"
             )
         
         with col2:
-            text_output = "GUITAR TO ALTO SAXOPHONE TRANSPOSITION\n"
-            text_output += "="*40 + "\n\n"
-            text_output += "Guitar Notes (Concert Pitch):\n"
-            text_output += ", ".join(valid_notes) + "\n\n"
-            text_output += "Alto Saxophone Notes:\n"
-            text_output += ", ".join(transposed_notes) + "\n"
+            saida_texto = "TRANSPOSIÇÃO DE GUITARRA PARA SAX ALTO\n"
+            saida_texto += "="*50 + "\n\n"
+            saida_texto += "Notas da Guitarra (Altura de Concerto):\n"
+            saida_texto += ", ".join(notas_validas) + "\n\n"
+            saida_texto += "Notas do Sax Alto:\n"
+            saida_texto += ", ".join(notas_transpostas) + "\n"
             
             st.download_button(
-                label="Download as TXT",
-                data=text_output,
-                file_name="transposition.txt",
+                label="Baixar em TXT",
+                data=saida_texto,
+                file_name="transposicao.txt",
                 mime="text/plain"
             )
 
 # Informações úteis
 st.markdown("---")
-st.subheader("ℹ️ Information")
+st.subheader("ℹ️ Informações")
 
-with st.expander("How the transposition works"):
+with st.expander("Como funciona a transposição?"):
     st.markdown("""
-    **Alto Saxophone Transposition:**
-    - Alto sax is an Eb instrument
-    - When an alto sax player reads a note, it sounds a major 6th lower
-    - This means: to transpose guitar notes to alto sax, we add 9 semitones
+    **Transposição para Sax Alto:**
+    - O sax alto é um instrumento em Mib
+    - Quando um músico de sax alto toca uma nota, ela soa uma sexta maior mais baixa
+    - Isso significa: para transpor notas de guitarra para sax alto, adicionamos 9 semitons
     
-    **Example:**
-    - Guitar C4 → Alto Sax A4 (sounds as C4)
-    - Guitar D4 → Alto Sax B4 (sounds as D4)
-    - Guitar E4 → Alto Sax C#5 (sounds as E4)
+    **Exemplos:**
+    - Guitarra Dó4 → Sax Alto Lá4 (soa como Dó4)
+    - Guitarra Ré4 → Sax Alto Si4 (soa como Ré4)
+    - Guitarra Mi4 → Sax Alto Dó#5 (soa como Mi4)
     """)
 
-with st.expander("Note naming convention"):
+with st.expander("Convenção de Nomeação de Notas"):
     st.markdown("""
-    **Format: NoteName + Octave**
-    - Note names: C, C#, D, D#, E, F, F#, G, G#, A, A#, B
-    - Octaves: 0-8 (common range for guitar: 2-6)
-    - Examples: C4, D#5, F#3, G2
+    **Formato: Nome da Nota + Oitava**
+    - Nomes das notas: Dó, Dó#, Ré, Ré#, Mi, Fá, Fá#, Sol, Sol#, Lá, Lá#, Si
+    - Oitavas: 0-8 (intervalo comum para guitarra: 2-6)
+    - Exemplos: Dó4, Ré#5, Fá#3, Sol2
     
-    **Guitar Standard Tuning:**
-    - Low E string: E2
-    - A string: A2
-    - D string: D3
-    - G string: G3
-    - B string: B3
-    - High E string: E4
+    **Afinação Padrão da Guitarra:**
+    - Corda Mi baixo: Mi2
+    - Corda Lá: Lá2
+    - Corda Ré: Ré3
+    - Corda Sol: Sol3
+    - Corda Si: Si3
+    - Corda Mi agudo: Mi4
     """)
 
 st.markdown("---")
-st.caption("Made with ❤️ using Streamlit and music21")
+st.caption("Feito com ❤️ usando Streamlit e music21")
