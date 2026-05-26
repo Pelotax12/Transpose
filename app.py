@@ -3,12 +3,12 @@ from music21 import note, stream, converter
 import re
 
 # Configurar página
-st.set_page_config(page_title="Transpositor de Guitarra para Sax Alto", layout="wide")
-st.title("🎸 Transpositor de Guitarra para 🎷 Sax Alto")
+st.set_page_config(page_title="Transpositor de Violão para Sax Alto", layout="wide")
+st.title("🎸 Transpositor de Violão para 🎷 Sax Alto")
 
 st.markdown("""
-Este aplicativo transpõe notas de guitarra para notação de sax alto.
-- **Guitarra**: Instrumento em altura de concerto
+Este aplicativo transpõe notas de violão para notação de sax alto.
+- **Violão**: Instrumento em altura de concerto
 - **Sax Alto**: Instrumento em Mib (soa uma sexta maior mais baixo)
 """)
 
@@ -56,9 +56,9 @@ def converter_nota_portuguesa(nome_nota_ingles):
     
     return resultado
 
-def analisar_notacao_guitarra(texto_entrada):
+def analisar_notacao_violao(texto_entrada):
     """
-    Analisa notação de guitarra e retorna lista de notas.
+    Analisa notação de violão e retorna lista de notas.
     Aceita formatos como: C4 D4 E4 ou C4, D4, E4
     """
     # Remover espaços extras e dividir
@@ -99,14 +99,14 @@ with col1:
     )
 
 if metodo_entrada == "Múltiplas Notas":
-    entrada_guitarra = st.text_area(
-        "Digite as notas da guitarra (separadas por espaços ou vírgulas):",
+    entrada_violao = st.text_area(
+        "Digite as notas do violão (separadas por espaços ou vírgulas):",
         placeholder="Exemplo: C4 D4 E4 F#4 G4",
         height=100
     )
     
-    if entrada_guitarra:
-        lista_notas = analisar_notacao_guitarra(entrada_guitarra)
+    if entrada_violao:
+        lista_notas = analisar_notacao_violao(entrada_violao)
         notas_validas, notas_invalidas = validar_notas(lista_notas)
         
         if notas_invalidas:
@@ -119,22 +119,22 @@ else:  # Uma Nota
     col_nota, col_oitava = st.columns(2)
     
     with col_nota:
-        nome_nota_guitarra = st.selectbox(
+        nome_nota_violao = st.selectbox(
             "Nota:",
             NOTAS_INGLES,
             index=0
         )
     
     with col_oitava:
-        oitava_guitarra = st.number_input(
+        oitava_violao = st.number_input(
             "Oitava:",
             min_value=0,
             max_value=8,
             value=4
         )
     
-    entrada_guitarra = f"{nome_nota_guitarra}{oitava_guitarra}"
-    lista_notas = [entrada_guitarra]
+    entrada_violao = f"{nome_nota_violao}{oitava_violao}"
+    lista_notas = [entrada_violao]
     notas_validas = lista_notas
 
 # Transposição
@@ -143,8 +143,8 @@ if notas_validas:
     
     notas_transpostas = []
     
-    for nota_guitarra in notas_validas:
-        transposta = transpor_nota(nota_guitarra, SEMITONS_TRANSPOSICAO)
+    for nota_violao in notas_validas:
+        transposta = transpor_nota(nota_violao, SEMITONS_TRANSPOSICAO)
         if transposta:
             notas_transpostas.append(transposta)
     
@@ -153,7 +153,7 @@ if notas_validas:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("🎸 Notas da Guitarra (Altura de Concerto)")
+            st.subheader("🎸 Notas do Violão (Altura de Concerto)")
             st.write(", ".join(notas_validas))
         
         with col2:
@@ -164,11 +164,11 @@ if notas_validas:
         st.subheader("📋 Transposição Detalhada")
         
         dados_tabela = []
-        for guitarra, sax in zip(notas_validas, notas_transpostas):
-            guitarra_pt = converter_nota_portuguesa(guitarra)
+        for violao, sax in zip(notas_validas, notas_transpostas):
+            violao_pt = converter_nota_portuguesa(violao)
             sax_pt = converter_nota_portuguesa(sax)
             dados_tabela.append({
-                "Nota Guitarra": guitarra_pt,
+                "Nota Violão": violao_pt,
                 "Nota Sax Alto": sax_pt,
             })
         
@@ -179,8 +179,8 @@ if notas_validas:
         col1, col2 = st.columns(2)
         
         with col1:
-            saida_csv = "Nota Guitarra,Nota Sax Alto\n"
-            saida_csv += "\n".join([f"{g},{s}" for g, s in zip(notas_validas, notas_transpostas)])
+            saida_csv = "Nota Violão,Nota Sax Alto\n"
+            saida_csv += "\n".join([f"{v},{s}" for v, s in zip(notas_validas, notas_transpostas)])
             st.download_button(
                 label="Baixar em CSV",
                 data=saida_csv,
@@ -189,9 +189,9 @@ if notas_validas:
             )
         
         with col2:
-            saida_texto = "TRANSPOSIÇÃO DE GUITARRA PARA SAX ALTO\n"
+            saida_texto = "TRANSPOSIÇÃO DE VIOLÃO PARA SAX ALTO\n"
             saida_texto += "="*50 + "\n\n"
-            saida_texto += "Notas da Guitarra (Altura de Concerto):\n"
+            saida_texto += "Notas do Violão (Altura de Concerto):\n"
             saida_texto += ", ".join(notas_validas) + "\n\n"
             saida_texto += "Notas do Sax Alto:\n"
             saida_texto += ", ".join(notas_transpostas) + "\n"
@@ -212,22 +212,22 @@ with st.expander("Como funciona a transposição?"):
     **Transposição para Sax Alto:**
     - O sax alto é um instrumento em Mib
     - Quando um músico de sax alto toca uma nota, ela soa uma sexta maior mais baixa
-    - Isso significa: para transpor notas de guitarra para sax alto, adicionamos 9 semitons
+    - Isso significa: para transpor notas de violão para sax alto, adicionamos 9 semitons
     
     **Exemplos:**
-    - Guitarra Dó4 → Sax Alto Lá4 (soa como Dó4)
-    - Guitarra Ré4 → Sax Alto Si4 (soa como Ré4)
-    - Guitarra Mi4 → Sax Alto Dó#5 (soa como Mi4)
+    - Violão Dó4 → Sax Alto Lá4 (soa como Dó4)
+    - Violão Ré4 → Sax Alto Si4 (soa como Ré4)
+    - Violão Mi4 → Sax Alto Dó#5 (soa como Mi4)
     """)
 
 with st.expander("Convenção de Nomeação de Notas"):
     st.markdown("""
     **Formato: Nome da Nota + Oitava**
     - Nomes das notas: Dó, Dó#, Ré, Ré#, Mi, Fá, Fá#, Sol, Sol#, Lá, Lá#, Si
-    - Oitavas: 0-8 (intervalo comum para guitarra: 2-6)
+    - Oitavas: 0-8 (intervalo comum para violão: 2-6)
     - Exemplos: Dó4, Ré#5, Fá#3, Sol2
     
-    **Afinação Padrão da Guitarra:**
+    **Afinação Padrão do Violão:**
     - Corda Mi baixo: Mi2
     - Corda Lá: Lá2
     - Corda Ré: Ré3
